@@ -1,5 +1,6 @@
 package com.propicks.main.controller.response;
 
+import com.propicks.main.model.Insights;
 import com.propicks.main.model.LaptopLinks;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -32,5 +33,6 @@ public class LaptopResponse {
     private String description;
     private List<String> imageLink;
     private List<LaptopLinks> link;
+    private List<Insights> insights;
 
 }

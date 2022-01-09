@@ -89,6 +89,7 @@ public class SpecificationService {
         recommendedSpecs.setRecGraphicsCard(GetMaxGraphicCard(recGraphicsList));
 
         recommendedSpecs.setStorage(storageUsed);
+        recommendedSpecs.setIsMinimum(true); // Usage of isMinimum is Deprecated, can be removed
 
         return recommendedSpecs;
     }

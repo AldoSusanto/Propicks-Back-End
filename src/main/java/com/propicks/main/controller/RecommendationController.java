@@ -55,13 +55,11 @@ public class RecommendationController {
         log.info("Received Request: " + request.toString());
         // 1)
         RecommendedSpecs recommendedSpecs = specificationService.calculateSpecifications(request);
-        recommendedSpecs.setIsMinimum(false);
 
         // 2)
         UserBudget userBudget = specificationService.determineUserBudget(request);
 
         // 3)
-        recommendedSpecs.setIsMinimum(true);
         List<String>  processorNamesList = specificationService.determineProcessorList(recommendedSpecs.getMinProcessor());
         List<String>  graphicCardsNamesList = specificationService.determineGraphicCardsList(recommendedSpecs.getMinGraphicsCard());
         List<LaptopEntity> laptopEntityList = laptopRepository.findSuitableLaptops(userBudget.getMinBudget(), userBudget.getMaxBudget(), processorNamesList, recommendedSpecs.getMinRam(), graphicCardsNamesList);
@@ -75,6 +73,8 @@ public class RecommendationController {
         if (!laptopEntityList.isEmpty()){
             topTen = rankingService.generateTopTen(laptopEntityList, userBudget, recommendedSpecs, request);
         }
+
+
 
         log.info("Returning Response: " + topTen.toString());
         return topTen;

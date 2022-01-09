@@ -216,26 +216,22 @@ public class RankingService {
     }
 
     private Double generateRamScore(LaptopEntity entity, RecommendedSpecs recommendedSpecs) {
-        // Rank the score of the ram (If its 64GB, rank 1 | if its 4GB, rank 6, etc)
+        // Rank the score of the ram (If its 64GB, rank 1 | if its 4GB, rank 5, etc)
         int laptopRank = classifyRAMToRanks(entity.getRam()); // Initialize with rank 1
         if(laptopRank > 5){
-            log.error("RAM Rank is bigger than 5 for laptop: {} which has ram of {}", entity.getId(), entity.getRam());
+            log.error("RAM Rank is bigger than 5 for laptop ID: {} which has ram of {}", entity.getId(), entity.getRam());
         }
 
-        int recommendationRank;
-        if(recommendedSpecs.getIsMinimum()){
-            recommendationRank = classifyRAMToRanks(recommendedSpecs.getMinRam());
-        }else{
-            recommendationRank = classifyRAMToRanks(recommendedSpecs.getRecRam());
-        }
+        int recommendationRank = classifyRAMToRanks(recommendedSpecs.getMinRam());
         int rankDiff = recommendationRank - laptopRank;
 
-        return Double.valueOf((rankDiff * 20) + 100); //formula is a bit different from processor since RAM buckets will always be 5 (64, 32, 16, 8, 4), so the increase will always be 20%
+        //formula is a bit different from processor since RAM buckets will always be 5 (64, 32, 16, 8, 4), so the increase will always be 20% per bucket
+        return Double.valueOf((rankDiff * 20) + 100);
 
     }
 
     private int classifyRAMToRanks(Integer input) {
-        int maxRam = MAXIMUM_RANK_RAM;
+        int maxRam = MAXIMUM_RANK_RAM; //64
         int rank = 1; // Initialize with rank 1
 
         // We divide 64 n times until we reach the input, that is the rank
@@ -251,12 +247,7 @@ public class RankingService {
         GraphicCardsEntity currentGraphicCard = graphicCardsList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getGraphics())).findFirst()
                 .orElseThrow(() -> new RuntimeException("Graphics Card " + currentLaptop.getGraphics() + " is not found in the graphics card list"));
 
-        int rankDiff;
-        if(recommendedSpecs.getIsMinimum()){
-            rankDiff = recommendedSpecs.getMinGraphicsCard().getNtileRank() - currentGraphicCard.getNtileRank();
-        }else {
-            rankDiff = recommendedSpecs.getRecGraphicsCard().getNtileRank() - currentGraphicCard.getNtileRank();
-        }
+        int rankDiff = recommendedSpecs.getMinGraphicsCard().getNtileRank() - currentGraphicCard.getNtileRank();
 
         // rankDiff * (Power / Max NTILE) + 100
         return Double.valueOf(rankDiff * (GRAPHICS_CARD_POWER / graphicCardsList.get(graphicCardsList.size() - 1).getNtileRank()) + 100);
@@ -267,12 +258,7 @@ public class RankingService {
         ProcessorEntity currentLaptopEntity = processorList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getProcessor())).findFirst()
                 .orElseThrow(() -> new RuntimeException("Processor " + currentLaptop.getProcessor() + " is not found in the processor list"));
 
-        int rankDiff;
-        if(recommendedSpecs.getIsMinimum()){
-            rankDiff = recommendedSpecs.getMinProcessor().getProcessorRank() - currentLaptopEntity.getProcessorRank();
-        }else{
-            rankDiff = recommendedSpecs.getRecProcessor().getProcessorRank() - currentLaptopEntity.getProcessorRank();
-        }
+        int rankDiff = recommendedSpecs.getMinProcessor().getProcessorRank() - currentLaptopEntity.getProcessorRank();
 
         return Double.valueOf(rankDiff * (100 / (processorList.get(processorList.size() - 1).getProcessorRank())) + 100);
         // We pick the last element in the list which has the highest rank (Ex: 5)
