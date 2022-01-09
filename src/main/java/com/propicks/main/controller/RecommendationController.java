@@ -7,6 +7,7 @@ import com.propicks.main.entity.LaptopEntity;
 import com.propicks.main.model.RecommendedSpecs;
 import com.propicks.main.model.UserBudget;
 import com.propicks.main.repository.LaptopRepository;
+import com.propicks.main.service.InsightsService;
 import com.propicks.main.service.PriceRankService;
 import com.propicks.main.service.RankingService;
 import com.propicks.main.service.SpecificationService;
@@ -26,15 +27,18 @@ public class RecommendationController {
     private RankingService rankingService;
     private LaptopRepository laptopRepository;
     private PriceRankService priceRankService;
+    private InsightsService insightsService;
 
     public RecommendationController(SpecificationService specificationService,
                                     RankingService rankingService,
                                     LaptopRepository laptopRepository,
-                                    PriceRankService priceRankService){
+                                    PriceRankService priceRankService,
+                                    InsightsService insightsService){
         this.specificationService = specificationService;
         this.rankingService = rankingService;
         this.laptopRepository = laptopRepository;
         this.priceRankService = priceRankService;
+        this.insightsService = insightsService;
     }
 
     @GetMapping("/")
@@ -67,14 +71,13 @@ public class RecommendationController {
         // 3.2)
         // todo
 
-        // todo: If laptop is still zero
         // 4
-        List<LaptopResponse> topTen = new ArrayList<>();
+        List<LaptopResponse> rawTopTen = new ArrayList<>();
         if (!laptopEntityList.isEmpty()){
-            topTen = rankingService.generateTopTen(laptopEntityList, userBudget, recommendedSpecs, request);
+            rawTopTen = rankingService.generateTopTen(laptopEntityList, userBudget, recommendedSpecs, request);
         }
 
-
+        List<LaptopResponse> topTen = insightsService.generateInsights(rawTopTen, request);
 
         log.info("Returning Response: " + topTen.toString());
         return topTen;
@@ -83,7 +86,8 @@ public class RecommendationController {
 }
 
 
-/* 2.? Special case
+/* 3.? Special case
+
     - There will be cases when user budget is so low but users want high spec laptops
     - For cases like these, then we shouldn't go with spec first approach, we should go with budget first approach
     - Just pick the laptops that meet his budget (max 30)

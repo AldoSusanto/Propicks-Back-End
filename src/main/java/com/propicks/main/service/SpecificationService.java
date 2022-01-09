@@ -20,6 +20,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.propicks.main.util.Util.gatherAllSoftwareFromUserPicks;
+
 
 @Service
 @Log4j2
@@ -40,21 +42,11 @@ public class SpecificationService {
     }
 
     public RecommendedSpecs calculateSpecifications(UserPicks userPicks){
-        // 1) Gather up the software that user picked
-        // 2) Query the softwares from the DB & get list of specs
-        // 3) Find the maximum of each lists
+        // 1) Query the softwares from the DB & get list of specs
+        // 2) Find the maximum of each lists
 
         // 1)
-        List<String> softwareList = new ArrayList<>();
-        softwareList.addAll(userPicks.getImageGraphics().getSoftware());
-        softwareList.addAll(userPicks.getGaming().getSoftware());
-        softwareList.addAll(userPicks.getVideoEditing().getSoftware());
-        softwareList.addAll(userPicks.getThreeDGraphics().getSoftware());
-        if(userPicks.getActivities().contains("Microsoft Office"))softwareList.add("Microsoft Office");
-
-        // 2)
-        if(softwareList.isEmpty()) softwareList.add("Test Software");
-        List<SoftwareEntity> entityList = softwareRepository.findByNameIn(softwareList);
+        List<SoftwareEntity> entityList = softwareRepository.findByNameIn(gatherAllSoftwareFromUserPicks(userPicks));
         List<String> minProcessorList = new ArrayList<>();
         List<Integer> minRamList = new ArrayList<>();
         List<String> minGraphicsList = new ArrayList<>();
@@ -73,20 +65,22 @@ public class SpecificationService {
             storageUsed = storageUsed + entity.getStorageSize();
         }
 
-        // 3)
+        // 2)
         RecommendedSpecs recommendedSpecs = new RecommendedSpecs();
 
         // Processors
-        recommendedSpecs.setMinProcessor(GetMaxProcessor(minProcessorList));
-        recommendedSpecs.setRecProcessor(GetMaxProcessor(recProcessorList));
+        List<ProcessorEntity> sortedProcessorList = processorRepository.findAllByOrderByProcessorRankAsc();
+        recommendedSpecs.setMinProcessor(GetMaxProcessor(minProcessorList, sortedProcessorList));
+        recommendedSpecs.setRecProcessor(GetMaxProcessor(recProcessorList, sortedProcessorList));
 
         // Ram
         recommendedSpecs.setMinRam(Collections.max(minRamList));
         recommendedSpecs.setRecRam(Collections.max(recRamList));
 
         // Graphics
-        recommendedSpecs.setMinGraphicsCard(GetMaxGraphicCard(minGraphicsList));
-        recommendedSpecs.setRecGraphicsCard(GetMaxGraphicCard(recGraphicsList));
+        List<GraphicCardsEntity> sortedGraphicCardList = graphicCardsRepository.findAllByOrderByGraphicCardRankAsc();
+        recommendedSpecs.setMinGraphicsCard(GetMaxGraphicCard(minGraphicsList, sortedGraphicCardList));
+        recommendedSpecs.setRecGraphicsCard(GetMaxGraphicCard(recGraphicsList, sortedGraphicCardList));
 
         recommendedSpecs.setStorage(storageUsed);
         recommendedSpecs.setIsMinimum(true); // Usage of isMinimum is Deprecated, can be removed
@@ -94,9 +88,7 @@ public class SpecificationService {
         return recommendedSpecs;
     }
 
-    private GraphicCardsEntity GetMaxGraphicCard(List<String> graphicCardsList) {
-        List<GraphicCardsEntity> sortedGraphicCardList = graphicCardsRepository.findAllByOrderByGraphicCardRankAsc();
-
+    private GraphicCardsEntity GetMaxGraphicCard(List<String> graphicCardsList, List<GraphicCardsEntity> sortedGraphicCardList) {
         for (GraphicCardsEntity entity : sortedGraphicCardList){
             if(graphicCardsList.contains(entity.getName())){
                 return entity;
@@ -108,9 +100,7 @@ public class SpecificationService {
 
     }
 
-    private ProcessorEntity GetMaxProcessor(List<String> processorList) {
-        List<ProcessorEntity> sortedProcessorList = processorRepository.findAllByOrderByProcessorRankAsc();
-
+    private ProcessorEntity GetMaxProcessor(List<String> processorList, List<ProcessorEntity> sortedProcessorList) {
         for(ProcessorEntity entity : sortedProcessorList){
             if(processorList.contains(entity.getName())){
                 return entity;
