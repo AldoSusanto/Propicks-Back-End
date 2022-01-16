@@ -13,4 +13,5 @@ public class Insights {
     private String description;
     private String icon;
     private String type;
+    private Integer priority;
 }

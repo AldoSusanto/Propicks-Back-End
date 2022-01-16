@@ -21,4 +21,5 @@ public class InsightsEntity {
     private String icon;
     private String description;
     private String type;
+    private Integer priority;
 }
