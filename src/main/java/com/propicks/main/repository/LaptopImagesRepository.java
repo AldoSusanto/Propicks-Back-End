@@ -4,8 +4,10 @@ import com.propicks.main.entity.LaptopImagesEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface LaptopImagesRepository extends JpaRepository<LaptopImagesEntity, String> {
 
-    LaptopImagesEntity findFirstByName(String name);
+    List<LaptopImagesEntity> findByNameIn(List<String> name);
 }

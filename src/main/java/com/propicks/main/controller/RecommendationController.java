@@ -1,6 +1,5 @@
 package com.propicks.main.controller;
 
-import com.propicks.main.controller.request.RecommendationRequest;
 import com.propicks.main.controller.request.userpicks.UserPicks;
 import com.propicks.main.controller.response.LaptopResponse;
 import com.propicks.main.entity.LaptopEntity;
@@ -43,7 +42,7 @@ public class RecommendationController {
 
     @GetMapping("/")
     public String healthCheck(){
-        return "Hello World ! V1.1.0";
+        return "Hello World ! V1.2.0";
     }
 
     @CrossOrigin
@@ -79,7 +78,7 @@ public class RecommendationController {
 
         List<LaptopResponse> topTen = insightsService.generateInsights(rawTopTen, request);
 
-        log.info("Returning Response: " + topTen.toString());
+        log.info("Returning {} Response: {}", topTen.size(), topTen.toString());
         return topTen;
 
     }

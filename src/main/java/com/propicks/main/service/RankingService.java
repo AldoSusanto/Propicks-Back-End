@@ -179,6 +179,7 @@ public class RankingService {
         int i = 0;
         List<LaptopResponse> topNresults = new ArrayList<>();
         List<String> laptopNames = new ArrayList<>();
+        List<String> laptopIdList = new ArrayList<>();
         while (topNresults.size() < numOfresults && i < scoreSheetList.size()){
             String laptopId = scoreSheetList.get(i).getLaptopId();
             LaptopEntity entity = laptopEntityList.stream().filter(p -> laptopId.equalsIgnoreCase(p.getId())).findFirst()
@@ -187,15 +188,44 @@ public class RankingService {
             // If a similar laptop hasn't been added before, we add the laptop to the top N results
             if(!laptopNames.contains(entity.getName())){
                 laptopNames.add(entity.getName());
-
-                // Convert Laptop Entity to Laptop Response using transformer
-                LaptopImagesEntity laptopImages = laptopImagesRepository.findFirstByName(entity.getName());
-                LaptopLinksEntity laptopLinks = laptopLinksRepository.getById(entity.getId());
-
-
-                topNresults.add(laptopTransformer.generateLaptopResponse(entity, laptopImages, laptopLinks));
+                laptopIdList.add(entity.getId());
+                topNresults.add(laptopTransformer.generateLaptopResponse(entity));
             }
             i = i + 1;
+        }
+
+        List<LaptopImagesEntity> laptopImagesList = laptopImagesRepository.findByNameIn(laptopNames);
+        List<LaptopLinksEntity> laptopLinksEntities = laptopLinksRepository.findAllById(laptopIdList);
+        for (LaptopResponse laptopResponse: topNresults) {
+            LaptopImagesEntity laptopImagesEntity = laptopImagesList.stream().filter(p -> laptopResponse.getName().equalsIgnoreCase(p.getName())).findFirst()
+                    .orElseThrow(() -> new RuntimeException("Images cant be found for Name: " + laptopResponse.getName()));
+
+            List<String> imagelinks = new ArrayList<>();
+            imagelinks.add(laptopImagesEntity.getImageLinkOne());
+            imagelinks.add(laptopImagesEntity.getImageLinkTwo());
+            imagelinks.add(laptopImagesEntity.getImageLinkThree());
+            imagelinks.add(laptopImagesEntity.getImageLinkFour());
+            imagelinks.add(laptopImagesEntity.getImageLinkFive());
+            laptopResponse.setImageLink(imagelinks);
+
+            LaptopLinksEntity laptopLinks = laptopLinksEntities.stream().filter(p -> laptopResponse.getId().equalsIgnoreCase(p.getId())).findFirst()
+                    .orElseThrow(() -> new RuntimeException("Links cant be found for ID: " + laptopResponse.getId()));
+
+            LaptopLinks link1 = new LaptopLinks();
+            link1.setLink(laptopLinks.getLinkOne());
+            link1.setLinkFrom(laptopLinks.getLinkOriginOne());
+            LaptopLinks link2 = new LaptopLinks();
+            link2.setLink(laptopLinks.getLinkTwo());
+            link2.setLinkFrom(laptopLinks.getLinkOriginTwo());
+            LaptopLinks link3 = new LaptopLinks();
+            link3.setLink(laptopLinks.getLinkThree());
+            link3.setLinkFrom(laptopLinks.getLinkOriginThree());
+
+            List<LaptopLinks> links = new ArrayList<>();
+            links.add(link1);
+            links.add(link2);
+            links.add(link3);
+            laptopResponse.setLink(links);
         }
 
         return topNresults;
@@ -219,7 +249,7 @@ public class RankingService {
         // Rank the score of the ram (If its 64GB, rank 1 | if its 4GB, rank 5, etc)
         int laptopRank = classifyRAMToRanks(entity.getRam()); // Initialize with rank 1
         if(laptopRank > 5){
-            log.error("RAM Rank is bigger than 5 for laptop ID: {} which has ram of {}", entity.getId(), entity.getRam());
+            log.error("RAM Rank is {} which is bigger than 5 | Laptop ID: {} which has ram of {}", laptopRank, entity.getId(), entity.getRam());
         }
 
         int recommendationRank = classifyRAMToRanks(recommendedSpecs.getMinRam());
@@ -235,7 +265,7 @@ public class RankingService {
         int rank = 1; // Initialize with rank 1
 
         // We divide 64 n times until we reach the input, that is the rank
-        while ((maxRam !=  input) && (maxRam > 1)){ // We add a safety net to make sure we don't cause infinite loop
+        while ((maxRam > input) && (maxRam > 1)){ // We add a safety net to make sure we don't cause infinite loop
             rank = rank + 1;
             maxRam = maxRam / 2;
         }

@@ -150,13 +150,13 @@ public class InsightsService {
         }
 
         if(laptopProcessor.getProcessorRank() > intel3.getProcessorRank()){
-            insightsList.add(obtainInsightFromId("25", DBList));
+            insightsList.add(obtainInsightFromId("26", DBList));
         }
 
         // RAM
         if(laptop.getRam() >= 16) insightsList.add(obtainInsightFromId("4", DBList));
 
-        if(laptop.getRam() <= 4) insightsList.add(obtainInsightFromId("26", DBList));
+        if(laptop.getRam() <= 4) insightsList.add(obtainInsightFromId("25", DBList));
 
         // Storage
         boolean hugeSize = (laptop.getStorageOne() + laptop.getStorageTwo()) >= 512;
