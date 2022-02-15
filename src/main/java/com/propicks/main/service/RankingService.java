@@ -25,11 +25,12 @@ public class RankingService {
     public static final String LIGHT = "light";
     public static final String MEDIUM = "medium";
     public static final Double MIN_WEIGHT_IN_DB = 0.75;
-    public static final Double MAX_WEIGHT_IN_DB = 2.30;
+    public static final Double MAX_WEIGHT_IN_DB = 4.0;
     public static final int SECONDARY_FACTOR_POWER = 50;
     public static final Double MAX_PROCESSOR_SCORE = 100.0;
     public static final Double MAX_RAM_SCORE = 100.0;
     public static final Double MAX_GRAPHICS_CARD_SCORE = 100.0;
+    public Double MAX_WEIGHT_SCORE = 100.0;
 
     private SoftwareRepository softwareRepository;
     private ProcessorRepository processorRepository;
@@ -124,15 +125,25 @@ public class RankingService {
         List<GraphicCardsEntity> graphicCardsList = graphicCardsRepository.findAllByOrderByGraphicCardRankAsc();
 
         // Score adjustments based on user picks
+        // Weight
+        MAX_WEIGHT_SCORE = generateMaxWeightScore(result);
+
+        // Gamers who don't care about weight
         Integer GRAPHICS_CARD_POWER = 100;
         if (midPrice.compareTo(new BigDecimal(12000000)) >= 0 &&
                 (!result.getGaming().getSoftware().isEmpty() || !result.getThreeDGraphics().getSoftware().isEmpty())){
             // If user budget is above 12million & he is either playing games or doing 3D animation, then we care about GCards
-            GRAPHICS_CARD_POWER = 250;
+            GRAPHICS_CARD_POWER = 400;
+             if (result.getWeight().contains("medium")){
+                MAX_WEIGHT_SCORE = 25.0;
+            }
         }
 
 
         for(LaptopEntity entity : laptopEntityList){
+//            if (entity.getId().equalsIgnoreCase("10317")){
+//                 log.info("Here's the entity");
+//            }
 
             ScoreSheet scoreSheet = new ScoreSheet();
             scoreSheet.setLaptopId(entity.getId());
@@ -150,14 +161,14 @@ public class RankingService {
             scoreSheet.setPrimaryTotalScore((scoreSheet.getPriceScore() + scoreSheet.getProcessorScore() + scoreSheet.getRamScore() + scoreSheet.getGraphicsScore()) / 4 );
 
             // Secondary Factors Max Scores
-            scoreSheet.setWeightMaxScore(generateMaxWeightScore(result));
+            scoreSheet.setWeightMaxScore(MAX_WEIGHT_SCORE);
             scoreSheet.setSizeMaxScore(50.0);
             scoreSheet.setTouchscreenMaxScore(50.0);
             scoreSheet.setBrandMaxScore(50.0);
 
             // Secondary Factors Scores
             scoreSheet.setWeightScore(generateWeightScore(entity, scoreSheet.getWeightMaxScore()));
-            scoreSheet.setSizeScore(entity.getSize().equals(Double.valueOf(result.getSize())) ? 50.0 : 0.00);
+            scoreSheet.setSizeScore(generateSizeScore(entity.getSize(), Double.valueOf(result.getSize())));
             scoreSheet.setTouchscreenScore(entity.getIsTouchscreen().equals(result.getTouchScreen().equals("YES")) ? 50.0 : 0.00);
             scoreSheet.setBrandScore(result.getBrand().contains(entity.getBrand()) ? 50.0 : 0.00);
             scoreSheet.setSecondaryTotalScore((scoreSheet.getWeightScore() + scoreSheet.getSizeScore() + scoreSheet.getTouchscreenScore() + scoreSheet.getBrandScore()) /
@@ -229,6 +240,17 @@ public class RankingService {
         }
 
         return topNresults;
+    }
+
+    private Double generateSizeScore(Double laptopSize, Double userSize) {
+        double difference = Math.abs(laptopSize - userSize);
+        if (difference > 1.0){
+            return 0.0;
+        }else if (difference == 1.0){
+            return 25.0;
+        }else {
+            return 50.0;
+        }
     }
 
     private Double generateMaxWeightScore(UserPicks result) {
