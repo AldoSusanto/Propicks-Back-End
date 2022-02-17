@@ -58,7 +58,9 @@ public class InsightsService {
             insights.addAll(checkMainSpecs(request, laptop, DBInsightsList, sortedProcessorList));
 
             // Gaming & GCards
-            insights.addAll(checkGamingInsights(request, laptop, DBInsightsList, sortedGraphicCardList));
+            if (request.getGaming() != null && !request.getGaming().getSoftware().isEmpty()){
+                insights.addAll(checkGamingInsights(request, laptop, DBInsightsList, sortedGraphicCardList));
+            }
 
             // Secondary Factors
             insights.addAll(checkSecondaryFactors(request, laptop, DBInsightsList));

@@ -42,7 +42,7 @@ public class RecommendationController {
 
     @GetMapping("/")
     public String healthCheck(){
-        return "Hello World ! V1.2.1";
+        return "Hello World ! V1.2.2";
     }
 
     @CrossOrigin
