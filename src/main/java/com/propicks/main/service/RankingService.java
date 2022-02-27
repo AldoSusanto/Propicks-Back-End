@@ -19,18 +19,21 @@ import java.util.stream.Collectors;
 @Service
 @Log4j2
 public class RankingService {
-    public static final Double priceDirectionPower = 60.0;
+    public static final Double priceDirectionPower =  40.0;
     public static final Double priceDirectionPowerPerMillion = priceDirectionPower / 7;
     public static final int MAXIMUM_RANK_RAM= 64;
     public static final String LIGHT = "light";
     public static final String MEDIUM = "medium";
     public static final Double MIN_WEIGHT_IN_DB = 0.75;
-    public static final Double MAX_WEIGHT_IN_DB = 4.0;
-    public static final int SECONDARY_FACTOR_POWER = 50;
+    public static final Double MAX_WEIGHT_IN_DB = 3.5;
     public static final Double MAX_PROCESSOR_SCORE = 100.0;
-    public static final Double MAX_RAM_SCORE = 100.0;
     public static final Double MAX_GRAPHICS_CARD_SCORE = 100.0;
-    public Double MAX_WEIGHT_SCORE = 100.0;
+    public Integer RAM_POWER = 20;
+    public Integer GRAPHICS_CARD_POWER = 15;
+    public Integer CPU_POWER = 20;
+
+    public int SECONDARY_FACTOR_POWER = 50;
+    public Double WEIGHT_POWER = 100.0;
 
     private SoftwareRepository softwareRepository;
     private ProcessorRepository processorRepository;
@@ -73,44 +76,6 @@ public class RankingService {
         return topTen;
     }
 
-    private List<Integer> determinePriceRatio(int highListSize, int medListSize, int lowListSize) {
-        List<Integer> ratio = new ArrayList<>(Arrays.asList(3, 4, 3));
-
-        if(highListSize <= 5) ratio.set(0, 0);
-        if(medListSize <= 5) ratio.set(1, 0);
-        if(lowListSize <= 5) ratio.set(2, 0);
-
-        // [3, 4, 0]
-        // 3/7 * 10 = 4.28
-        // 4/7 * 10 = 5.7
-        // If a list that is empty exist, we adjust the price ratio of top ten
-        int ratioSum = ratio.stream().mapToInt(value -> value).sum();
-        if(ratioSum < 10){
-            for(int i = 0 ; i < ratio.size() ; i++){
-                float division = (float) ratio.get(i) / ratioSum;
-                ratio.set(i, Math.round(division * 10));
-            }
-        }
-
-        return ratio;
-    }
-
-    // This function always return
-    private List<BigDecimal> generatePriceDivisions(UserBudget userBudget) {
-        // We want to divide the range into 3 sections  |-------|-------|-------|
-        //                                             7.5    10.2    12.8    15.5
-
-        List<BigDecimal> result = new ArrayList<>();
-        BigDecimal range = userBudget.getMaxBudget().subtract(userBudget.getMinBudget());
-
-        result.add(userBudget.getMinBudget());
-        result.add(userBudget.getMinBudget().add(range.multiply(BigDecimal.valueOf(0.33))));
-        result.add(userBudget.getMinBudget().add(range.multiply(BigDecimal.valueOf(0.66))));
-        result.add(userBudget.getMaxBudget());
-
-        return result;
-    }
-
     // For more information on the algorithms, check
     public List<LaptopResponse> generateTopN(List<LaptopEntity> laptopEntityList,
                                              BigDecimal midPrice,
@@ -126,16 +91,27 @@ public class RankingService {
 
         // Score adjustments based on user picks
         // Weight
-        MAX_WEIGHT_SCORE = generateMaxWeightScore(result);
+        WEIGHT_POWER = generateMaxWeightScore(result);
 
-        // Gamers who don't care about weight
-        Integer GRAPHICS_CARD_POWER = 100;
-        if (midPrice.compareTo(new BigDecimal(12000000)) >= 0 &&
-                (!result.getGaming().getSoftware().isEmpty() || !result.getThreeDGraphics().getSoftware().isEmpty())){
-            // If user budget is above 12million & he is either playing games or doing 3D animation, then we care about GCards
-            GRAPHICS_CARD_POWER = 400;
-             if (result.getWeight().contains("medium")){
-                MAX_WEIGHT_SCORE = 25.0;
+
+        if (midPrice.compareTo(new BigDecimal(12000000)) >= 0) {
+            if (!result.getGaming().getSoftware().isEmpty()) { // We increase GCard importance for gaming users
+                if (result.getGaming().getSoftware().size() > 1) {
+                    // If user budget is above 12million & he is either playing games or doing 3D animation, then we care about GCards
+                    GRAPHICS_CARD_POWER = 30;
+                } else {
+                    GRAPHICS_CARD_POWER = 20;
+                }
+
+                if (result.getWeight().contains("medium")) {
+                    WEIGHT_POWER = 25.0;
+                }
+            } else { // For non gamers -- increase importance of laptop weight to decrease chance of gamer laptops to be picked
+
+                // We increase weight by a lot but not secondary power because we dont want weight to overpower primary specs
+                // Based on testing, 200 is a good number
+                WEIGHT_POWER = WEIGHT_POWER + 200;
+                SECONDARY_FACTOR_POWER = 75;
             }
         }
 
@@ -149,9 +125,6 @@ public class RankingService {
             scoreSheet.setLaptopId(entity.getId());
 
             // Primary Factors Max Scores
-            scoreSheet.setProcessorMaxScore(MAX_PROCESSOR_SCORE);
-            scoreSheet.setGraphicsMaxScore(MAX_GRAPHICS_CARD_SCORE);
-            scoreSheet.setRamMaxScore(MAX_RAM_SCORE);
 
             // Primary Factors Scores
             scoreSheet.setPriceScore(generatePriceScore(entity, midPrice));
@@ -161,7 +134,7 @@ public class RankingService {
             scoreSheet.setPrimaryTotalScore((scoreSheet.getPriceScore() + scoreSheet.getProcessorScore() + scoreSheet.getRamScore() + scoreSheet.getGraphicsScore()) / 4 );
 
             // Secondary Factors Max Scores
-            scoreSheet.setWeightMaxScore(MAX_WEIGHT_SCORE);
+            scoreSheet.setWeightMaxScore(WEIGHT_POWER);
             scoreSheet.setSizeMaxScore(50.0);
             scoreSheet.setTouchscreenMaxScore(50.0);
             scoreSheet.setBrandMaxScore(50.0);
@@ -262,9 +235,9 @@ public class RankingService {
         return 100.0;
     }
 
-    private Double generateWeightScore(LaptopEntity entity, Double maxWeight) {
-        double weightScore = (MIN_WEIGHT_IN_DB - entity.getWeightGrams()) / (MAX_WEIGHT_IN_DB - MIN_WEIGHT_IN_DB) * maxWeight;
-        return maxWeight + weightScore;
+    private Double generateWeightScore(LaptopEntity entity, Double weight_power) {
+        double weightScore = (MIN_WEIGHT_IN_DB - entity.getWeightGrams()) / (MAX_WEIGHT_IN_DB - MIN_WEIGHT_IN_DB) * weight_power;
+        return weight_power + weightScore;
     }
 
     private Double generateRamScore(LaptopEntity entity, RecommendedSpecs recommendedSpecs) {
@@ -278,8 +251,41 @@ public class RankingService {
         int rankDiff = recommendationRank - laptopRank;
 
         //formula is a bit different from processor since RAM buckets will always be 5 (64, 32, 16, 8, 4), so the increase will always be 20% per bucket
-        return Double.valueOf((rankDiff * 20) + 100);
+        return (double) ((rankDiff * RAM_POWER) + 100);
 
+    }
+
+    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
+    private Double generateGraphicsScore(LaptopEntity currentLaptop, List<GraphicCardsEntity> graphicCardsList, RecommendedSpecs recommendedSpecs, Integer GRAPHICS_CARD_POWER) {
+        GraphicCardsEntity currentGraphicCard = graphicCardsList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getGraphics())).findFirst()
+                .orElseThrow(() -> new RuntimeException("Graphics Card " + currentLaptop.getGraphics() + " is not found in the graphics card list"));
+
+        int rankDiff = recommendedSpecs.getMinGraphicsCard().getNtileRank() - currentGraphicCard.getNtileRank();
+
+        // rankDiff * Power + 100
+        return (double) (rankDiff * GRAPHICS_CARD_POWER + 100);
+    }
+
+    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
+    private Double generateProcessorScore(LaptopEntity currentLaptop, List<ProcessorEntity> processorList, RecommendedSpecs recommendedSpecs) {
+        ProcessorEntity currentLaptopEntity = processorList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getProcessor())).findFirst()
+                .orElseThrow(() -> new RuntimeException("Processor " + currentLaptop.getProcessor() + " is not found in the processor list"));
+
+        int rankDiff = recommendedSpecs.getMinProcessor().getProcessorRank() - currentLaptopEntity.getProcessorRank();
+
+        return (double) (rankDiff * CPU_POWER + 100);
+        // We pick the last element in the list which has the highest rank (Ex: 5)
+    }
+
+    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
+    private Double generatePriceScore(LaptopEntity entity, BigDecimal midPrice) {
+//        UserBudget userBudget = new UserBudget(original.getMinBudget(), original.getMaxBudget());
+//        userBudget.setMinBudget(userBudget.getMinBudget().add(new BigDecimal(500000)));
+//        userBudget.setMaxBudget(userBudget.getMaxBudget().subtract(new BigDecimal(500000)));
+//        double priceRange = userBudget.getMaxBudget().subtract(userBudget.getMinBudget()).doubleValue();
+//        double midPrice = userBudget.getMinBudget().doubleValue() + (priceRange/2) ;
+
+         return 100 - ((entity.getPrice().doubleValue() - midPrice.doubleValue()) / 1000000 * priceDirectionPowerPerMillion);
     }
 
     private int classifyRAMToRanks(Integer input) {
@@ -294,42 +300,46 @@ public class RankingService {
         return rank;
     }
 
-    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
-    private Double generateGraphicsScore(LaptopEntity currentLaptop, List<GraphicCardsEntity> graphicCardsList, RecommendedSpecs recommendedSpecs, Integer GRAPHICS_CARD_POWER) {
-        GraphicCardsEntity currentGraphicCard = graphicCardsList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getGraphics())).findFirst()
-                .orElseThrow(() -> new RuntimeException("Graphics Card " + currentLaptop.getGraphics() + " is not found in the graphics card list"));
-
-        int rankDiff = recommendedSpecs.getMinGraphicsCard().getNtileRank() - currentGraphicCard.getNtileRank();
-
-        // rankDiff * (Power / Max NTILE) + 100
-        return Double.valueOf(rankDiff * (GRAPHICS_CARD_POWER / graphicCardsList.get(graphicCardsList.size() - 1).getNtileRank()) + 100);
-    }
-
-    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
-    private Double generateProcessorScore(LaptopEntity currentLaptop, List<ProcessorEntity> processorList, RecommendedSpecs recommendedSpecs) {
-        ProcessorEntity currentLaptopEntity = processorList.stream().filter(p -> p.getName().equalsIgnoreCase(currentLaptop.getProcessor())).findFirst()
-                .orElseThrow(() -> new RuntimeException("Processor " + currentLaptop.getProcessor() + " is not found in the processor list"));
-
-        int rankDiff = recommendedSpecs.getMinProcessor().getProcessorRank() - currentLaptopEntity.getProcessorRank();
-
-        return Double.valueOf(rankDiff * (100 / (processorList.get(processorList.size() - 1).getProcessorRank())) + 100);
-        // We pick the last element in the list which has the highest rank (Ex: 5)
-    }
-
-    // For more details about the algorithm, see note 9 - Primary Specs Ranking Algorithm
-    private Double generatePriceScore(LaptopEntity entity, BigDecimal midPrice) {
-//        UserBudget userBudget = new UserBudget(original.getMinBudget(), original.getMaxBudget());
-//        userBudget.setMinBudget(userBudget.getMinBudget().add(new BigDecimal(500000)));
-//        userBudget.setMaxBudget(userBudget.getMaxBudget().subtract(new BigDecimal(500000)));
-//        double priceRange = userBudget.getMaxBudget().subtract(userBudget.getMinBudget()).doubleValue();
-//        double midPrice = userBudget.getMinBudget().doubleValue() + (priceRange/2) ;
-
-        return 100 - Math.abs ((entity.getPrice().doubleValue() - midPrice.doubleValue()) / 1000000 * priceDirectionPowerPerMillion);
-    }
-
     private BigDecimal getMidValue(BigDecimal min, BigDecimal max){
         BigDecimal priceRange = max.subtract(min).divide(BigDecimal.valueOf(2));
         return min.add(priceRange);
     }
 
+    // This function always return
+    private List<BigDecimal> generatePriceDivisions(UserBudget userBudget) {
+        // We want to divide the range into 3 sections  |-------|-------|-------|
+        //                                             7.5    10.2    12.8    15.5
+
+        List<BigDecimal> result = new ArrayList<>();
+        BigDecimal range = userBudget.getMaxBudget().subtract(userBudget.getMinBudget());
+
+        result.add(userBudget.getMinBudget());
+        result.add(userBudget.getMinBudget().add(range.multiply(BigDecimal.valueOf(0.33))));
+        result.add(userBudget.getMinBudget().add(range.multiply(BigDecimal.valueOf(0.66))));
+        result.add(userBudget.getMaxBudget());
+
+        return result;
+    }
+
+    private List<Integer> determinePriceRatio(int highListSize, int medListSize, int lowListSize) {
+        List<Integer> ratio = new ArrayList<>(Arrays.asList(3, 4, 3));
+
+        if(highListSize <= 5) ratio.set(0, 0);
+        if(medListSize <= 5) ratio.set(1, 0);
+        if(lowListSize <= 5) ratio.set(2, 0);
+
+        // [3, 4, 0]
+        // 3/7 * 10 = 4.28
+        // 4/7 * 10 = 5.7
+        // If a list that is empty exist, we adjust the price ratio of top ten
+        int ratioSum = ratio.stream().mapToInt(value -> value).sum();
+        if(ratioSum < 10){
+            for(int i = 0 ; i < ratio.size() ; i++){
+                float division = (float) ratio.get(i) / ratioSum;
+                ratio.set(i, Math.round(division * 10));
+            }
+        }
+
+        return ratio;
+    }
 }
