@@ -216,12 +216,13 @@ public class InsightsService {
 
 
         // Brand
-        if(request.getBrand().contains(laptop.getBrand())){
+        if(request.getBrand().stream().anyMatch(laptop.getBrand()::equalsIgnoreCase)){
             insightsList.add(obtainInsightFromId("20", DBList));
         }
 
         // Size
-        if(!request.getSize().equalsIgnoreCase(String.valueOf(laptop.getSize().intValue()))){
+        double difference = Math.abs(laptop.getSize() - Double.parseDouble(request.getSize()));
+        if (difference > 1.0) {
             insightsList.add(obtainInsightFromId("27", DBList));
         }
 

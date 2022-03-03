@@ -2,13 +2,27 @@ package com.propicks.main.controller.transformer;
 
 import com.propicks.main.controller.response.LaptopResponse;
 import com.propicks.main.entity.LaptopEntity;
+import com.propicks.main.entity.LaptopImagesEntity;
+import com.propicks.main.entity.LaptopLinksEntity;
+import com.propicks.main.model.LaptopLinks;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class LaptopTransformer {
 
-    public LaptopResponse generateLaptopResponse(LaptopEntity entity){
+    public LaptopResponse generateLaptopResponse(LaptopEntity entity, LaptopImagesEntity imagesEntity, LaptopLinksEntity linksEntity){
         LaptopResponse response = new LaptopResponse();
+
+        //Checker
+        if (imagesEntity.getImageLinkOne().isEmpty()) {
+            throw new RuntimeException("Image Link for laptop ID: " + entity.getId() + " is empty");
+        }
+        if (linksEntity.getLinkOne().isEmpty()) {
+            throw new RuntimeException("Link for laptop ID: " + entity.getId() + " is empty");
+        }
 
         response.setId(entity.getId());
         response.setTitle(entity.getTitle());
@@ -27,6 +41,30 @@ public class LaptopTransformer {
         response.setWeightGrams(entity.getWeightGrams());
         response.setSize(entity.getSize());
         response.setDescription(entity.getDescription());
+
+        List<String> imagelinks = new ArrayList<>();
+        imagelinks.add(imagesEntity.getImageLinkOne());
+        imagelinks.add(imagesEntity.getImageLinkTwo());
+        imagelinks.add(imagesEntity.getImageLinkThree());
+        imagelinks.add(imagesEntity.getImageLinkFour());
+        imagelinks.add(imagesEntity.getImageLinkFive());
+        response.setImageLink(imagelinks);
+
+        LaptopLinks link1 = new LaptopLinks();
+        link1.setLink(linksEntity.getLinkOne());
+        link1.setLinkFrom(linksEntity.getLinkOriginOne());
+        LaptopLinks link2 = new LaptopLinks();
+        link2.setLink(linksEntity.getLinkTwo());
+        link2.setLinkFrom(linksEntity.getLinkOriginTwo());
+        LaptopLinks link3 = new LaptopLinks();
+        link3.setLink(linksEntity.getLinkThree());
+        link3.setLinkFrom(linksEntity.getLinkOriginThree());
+
+        List<LaptopLinks> links = new ArrayList<>();
+        links.add(link1);
+        links.add(link2);
+        links.add(link3);
+        response.setLink(links);
 
         return response;
     }

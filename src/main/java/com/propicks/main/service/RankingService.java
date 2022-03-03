@@ -4,7 +4,9 @@ import com.propicks.main.controller.request.userpicks.UserPicks;
 import com.propicks.main.controller.response.LaptopResponse;
 import com.propicks.main.controller.transformer.LaptopTransformer;
 import com.propicks.main.entity.*;
-import com.propicks.main.model.*;
+import com.propicks.main.model.RecommendedSpecs;
+import com.propicks.main.model.ScoreSheet;
+import com.propicks.main.model.UserBudget;
 import com.propicks.main.repository.*;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -112,6 +114,7 @@ public class RankingService {
                 // Based on testing, 200 is a good number
                 WEIGHT_POWER = WEIGHT_POWER + 200;
                 SECONDARY_FACTOR_POWER = 75;
+                GRAPHICS_CARD_POWER = 5; //Number is very low but keep in mind that GCard has many NTIles
             }
         }
 
@@ -143,7 +146,7 @@ public class RankingService {
             scoreSheet.setWeightScore(generateWeightScore(entity, scoreSheet.getWeightMaxScore()));
             scoreSheet.setSizeScore(generateSizeScore(entity.getSize(), Double.valueOf(result.getSize())));
             scoreSheet.setTouchscreenScore(entity.getIsTouchscreen().equals(result.getTouchScreen().equals("YES")) ? 50.0 : 0.00);
-            scoreSheet.setBrandScore(result.getBrand().contains(entity.getBrand()) ? 50.0 : 0.00);
+            scoreSheet.setBrandScore(result.getBrand().stream().anyMatch(entity.getBrand()::equalsIgnoreCase) ? 50.0 : 0.00);
             scoreSheet.setSecondaryTotalScore((scoreSheet.getWeightScore() + scoreSheet.getSizeScore() + scoreSheet.getTouchscreenScore() + scoreSheet.getBrandScore()) /
                     (scoreSheet.getWeightMaxScore() + scoreSheet.getSizeMaxScore() + scoreSheet.getTouchscreenMaxScore() + scoreSheet.getBrandMaxScore()) * SECONDARY_FACTOR_POWER);
 
@@ -163,54 +166,27 @@ public class RankingService {
         int i = 0;
         List<LaptopResponse> topNresults = new ArrayList<>();
         List<String> laptopNames = new ArrayList<>();
-        List<String> laptopIdList = new ArrayList<>();
         while (topNresults.size() < numOfresults && i < scoreSheetList.size()){
             String laptopId = scoreSheetList.get(i).getLaptopId();
-            LaptopEntity entity = laptopEntityList.stream().filter(p -> laptopId.equalsIgnoreCase(p.getId())).findFirst()
-                    .orElseThrow(() -> new RuntimeException("Laptop with ID: " + laptopId + " cant be found"));
+            try {
+                LaptopEntity entity = laptopEntityList.stream().filter(p -> laptopId.equalsIgnoreCase(p.getId())).findFirst()
+                        .orElseThrow(() -> new RuntimeException("Laptop with ID: " + laptopId + " cant be found"));
 
-            // If a similar laptop hasn't been added before, we add the laptop to the top N results
-            if(!laptopNames.contains(entity.getName())){
-                laptopNames.add(entity.getName());
-                laptopIdList.add(entity.getId());
-                topNresults.add(laptopTransformer.generateLaptopResponse(entity));
+                LaptopImagesEntity imagesEntity = laptopImagesRepository.findById(entity.getId()).get();
+                LaptopLinksEntity linksEntity = laptopLinksRepository.findById(entity.getId()).get();
+
+                // If a similar laptop hasn't been added before, we add the laptop to the top N results
+                if(!laptopNames.contains(entity.getName())){
+                    laptopNames.add(entity.getName());
+                    topNresults.add(laptopTransformer.generateLaptopResponse(entity, imagesEntity, linksEntity));
+                }
+            } catch (Exception e){
+                log.error("Something is wrong with Laptop ID: {}, Exception: {}", laptopId, e);
+            } finally {
+                i = i + 1;
             }
-            i = i + 1;
         }
 
-        List<LaptopImagesEntity> laptopImagesList = laptopImagesRepository.findByNameIn(laptopNames);
-        List<LaptopLinksEntity> laptopLinksEntities = laptopLinksRepository.findAllById(laptopIdList);
-        for (LaptopResponse laptopResponse: topNresults) {
-            LaptopImagesEntity laptopImagesEntity = laptopImagesList.stream().filter(p -> laptopResponse.getName().equalsIgnoreCase(p.getName())).findFirst()
-                    .orElseThrow(() -> new RuntimeException("Images cant be found for Name: " + laptopResponse.getName()));
-
-            List<String> imagelinks = new ArrayList<>();
-            imagelinks.add(laptopImagesEntity.getImageLinkOne());
-            imagelinks.add(laptopImagesEntity.getImageLinkTwo());
-            imagelinks.add(laptopImagesEntity.getImageLinkThree());
-            imagelinks.add(laptopImagesEntity.getImageLinkFour());
-            imagelinks.add(laptopImagesEntity.getImageLinkFive());
-            laptopResponse.setImageLink(imagelinks);
-
-            LaptopLinksEntity laptopLinks = laptopLinksEntities.stream().filter(p -> laptopResponse.getId().equalsIgnoreCase(p.getId())).findFirst()
-                    .orElseThrow(() -> new RuntimeException("Links cant be found for ID: " + laptopResponse.getId()));
-
-            LaptopLinks link1 = new LaptopLinks();
-            link1.setLink(laptopLinks.getLinkOne());
-            link1.setLinkFrom(laptopLinks.getLinkOriginOne());
-            LaptopLinks link2 = new LaptopLinks();
-            link2.setLink(laptopLinks.getLinkTwo());
-            link2.setLinkFrom(laptopLinks.getLinkOriginTwo());
-            LaptopLinks link3 = new LaptopLinks();
-            link3.setLink(laptopLinks.getLinkThree());
-            link3.setLinkFrom(laptopLinks.getLinkOriginThree());
-
-            List<LaptopLinks> links = new ArrayList<>();
-            links.add(link1);
-            links.add(link2);
-            links.add(link3);
-            laptopResponse.setLink(links);
-        }
 
         return topNresults;
     }
