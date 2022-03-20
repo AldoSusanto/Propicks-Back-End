@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Insights {
 
+    private String id;
     private String title;
     private String description;
     private String icon;

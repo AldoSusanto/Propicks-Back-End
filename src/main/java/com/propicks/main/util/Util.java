@@ -52,6 +52,7 @@ public class Util {
     public static Insights generateInsightFromEntity(InsightsEntity entity){
         Insights insights = new Insights();
 
+        insights.setId(entity.getId());
         insights.setTitle(entity.getTitle());
         insights.setType(entity.getType());
         insights.setIcon(entity.getIcon());

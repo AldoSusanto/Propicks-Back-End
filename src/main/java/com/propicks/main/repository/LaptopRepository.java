@@ -15,7 +15,8 @@ public interface LaptopRepository extends JpaRepository<LaptopEntity, String> {
             " AND lp.price < ?2 " +
             " AND lp.processor IN ?3 " +
             " AND lp.ram >= ?4 " +
-            " AND lp.graphics IN ?5", nativeQuery = true)
+            " AND lp.graphics IN ?5" +
+            " AND lp.is_valid = 1", nativeQuery = true)
     public List<LaptopEntity> findSuitableLaptops(BigDecimal min, BigDecimal max, List<String> processorNamesList, Integer ram, List<String> graphicCardsNamesList);
 
 }

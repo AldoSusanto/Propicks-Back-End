@@ -29,6 +29,7 @@ public class InsightsService {
     private SoftwareRepository softwareRepository;
     private ProcessorRepository processorRepository;
     private GraphicCardsRepository graphicCardsRepository;
+    public static final int INSIGHTS_LIMIT = 6;
 
     public InsightsService(InsightsRepository insightsRepository, SoftwareRepository softwareRepository, ProcessorRepository processorRepository, GraphicCardsRepository graphicCardsRepository) {
         this.insightsRepository = insightsRepository;
@@ -40,7 +41,14 @@ public class InsightsService {
     public List<LaptopResponse> generateInsights(List<LaptopResponse> rawTopTen, UserPicks request) {
         List<GraphicCardsEntity> sortedGraphicCardList = graphicCardsRepository.findAllByOrderByGraphicCardRankAsc();
         List<ProcessorEntity> sortedProcessorList = processorRepository.findAllByOrderByProcessorRankAsc();
-        List<InsightsEntity> DBInsightsList = insightsRepository.findAll();
+        List<InsightsEntity> dbInsightsList = insightsRepository.findAll();
+
+        // Create a list with size of [total num of insights] then initialize all with 0.
+        // For each insights found, we increase the counter by one
+        List<Integer> insightsCounter = new ArrayList<>();
+        for (int i = 0 ; i < dbInsightsList.size(); i++){
+            insightsCounter.add(0);
+        }
 
         for(LaptopResponse laptop : rawTopTen){
             // 1) Check whether ada software yang diinginkan oleh user tapi tidak bisa di run oleh laptopnya
@@ -48,35 +56,42 @@ public class InsightsService {
             List<Insights> insights = new ArrayList<>();
 
             // 1
-            insights.addAll(checkUnrunnableSoftware(request, laptop, DBInsightsList,  sortedGraphicCardList, sortedProcessorList));
+            insights.addAll(checkUnrunnableSoftware(request, laptop, dbInsightsList,  sortedGraphicCardList, sortedProcessorList));
 
             // 2
             // Weight
-            insights.addAll(checkLaptopWeight(laptop, DBInsightsList));
+            insights.addAll(checkLaptopWeight(laptop, dbInsightsList));
 
             // CPU & HDD & RAM
-            insights.addAll(checkMainSpecs(request, laptop, DBInsightsList, sortedProcessorList));
+            insights.addAll(checkMainSpecs(request, laptop, dbInsightsList, sortedProcessorList));
 
             // Gaming & GCards
             if (request.getGaming() != null && !request.getGaming().getSoftware().isEmpty()){
-                insights.addAll(checkGamingInsights(request, laptop, DBInsightsList, sortedGraphicCardList));
+                insights.addAll(checkGamingInsights(request, laptop, dbInsightsList, sortedGraphicCardList));
             }
 
             // Secondary Factors
-            insights.addAll(checkSecondaryFactors(request, laptop, DBInsightsList));
+            insights.addAll(checkSecondaryFactors(request, laptop, dbInsightsList));
+
+            //todo
+//            updateInsightsCounter(insights)
 
             insights = sortByPriorityAndFilter(insights);
 
             laptop.setInsights(insights);
 
         }
+
+        //todo: check list of insights that should be removed
+        //todo: go through each laptopResponse, then create removeRedundantInsights(response.getInsights, redundantInsightsList)
+        //todo: This func can use the remove arraylist.remove(object o) func since we overrided the equals
         return rawTopTen;
     }
 
     private List<Insights> sortByPriorityAndFilter(List<Insights> insights) {
         return insights.stream()
                 .sorted(Comparator.comparing(Insights::getPriority))
-                .limit(8)
+                .limit(INSIGHTS_LIMIT)
                 .collect(Collectors.toList());
     }
 
