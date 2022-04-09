@@ -157,12 +157,14 @@ public class RankingService {
 
         scoreSheetList.sort(Comparator.comparing(ScoreSheet::getTotalScore).reversed());
 
-        // Change response to include scoreSheet
+//        Deprecated
+//        Change response to include scoreSheet
 //        for(int i = 0 ; i < numOfresults ; i ++){
 //            String laptopId = scoreSheetList.get(i).getLaptopId();
 //            topNresults.add(laptopEntityList.stream().filter(p -> laptopId.equalsIgnoreCase(p.getId())).findFirst()
 //                    .orElseThrow(() -> new RuntimeException("Laptop with ID: " + laptopId + " cant be found")));
 //        }
+
         int i = 0;
         List<LaptopResponse> topNresults = new ArrayList<>();
         List<String> laptopNames = new ArrayList<>();
@@ -172,7 +174,7 @@ public class RankingService {
                 LaptopEntity entity = laptopEntityList.stream().filter(p -> laptopId.equalsIgnoreCase(p.getId())).findFirst()
                         .orElseThrow(() -> new RuntimeException("Laptop with ID: " + laptopId + " cant be found"));
 
-                LaptopImagesEntity imagesEntity = laptopImagesRepository.findById(entity.getId()).get();
+                LaptopImagesEntity imagesEntity = laptopImagesRepository.findByName(entity.getName()).get(0);
                 LaptopLinksEntity linksEntity = laptopLinksRepository.findById(entity.getId()).get();
 
                 // If a similar laptop hasn't been added before, we add the laptop to the top N results
