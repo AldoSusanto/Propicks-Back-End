@@ -11,6 +11,7 @@ import com.propicks.main.repository.*;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -300,23 +301,28 @@ public class RankingService {
     }
 
     private List<Integer> determinePriceRatio(int highListSize, int medListSize, int lowListSize) {
-        List<Integer> ratio = new ArrayList<>(Arrays.asList(3, 4, 3));
+        List<Integer> ratio = new ArrayList<>(Arrays.asList(highListSize, medListSize, lowListSize));
 
-        if(highListSize <= 5) ratio.set(0, 0);
-        if(medListSize <= 5) ratio.set(1, 0);
-        if(lowListSize <= 5) ratio.set(2, 0);
+        if (highListSize + medListSize + lowListSize < 10) {
+            // If the total num of laptops doesn't even reach 10, we return all
+            return ratio;
+        }
+//        Temp delete: if no issues until 6/17/2022, we can delete them
+//        if(highListSize <= 5) ratio.set(0, 0);
+//        if(medListSize <= 5) ratio.set(1, 0);
+//        if(lowListSize <= 5) ratio.set(2, 0);
 
         // [3, 4, 0]
         // 3/7 * 10 = 4.28
         // 4/7 * 10 = 5.7
         // If a list that is empty exist, we adjust the price ratio of top ten
         int ratioSum = ratio.stream().mapToInt(value -> value).sum();
-        if(ratioSum < 10){
-            for(int i = 0 ; i < ratio.size() ; i++){
-                float division = (float) ratio.get(i) / ratioSum;
-                ratio.set(i, Math.round(division * 10));
-            }
+        for(int i = 0 ; i < ratio.size() ; i++){
+            float division = (float) ratio.get(i) / ratioSum;
+            ratio.set(i, Math.round(division * 10));
         }
+//        Temp delete: if no issues until 6/17/2022, we can delete them
+//        if(ratioSum < 10){ }
 
         return ratio;
     }

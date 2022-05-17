@@ -19,4 +19,8 @@ public interface LaptopRepository extends JpaRepository<LaptopEntity, String> {
             " AND lp.is_valid = 1", nativeQuery = true)
     public List<LaptopEntity> findSuitableLaptops(BigDecimal min, BigDecimal max, List<String> processorNamesList, Integer ram, List<String> graphicCardsNamesList);
 
+    @Query(value = "SELECT * FROM laptops lp WHERE ?1 < lp.price " +
+            " AND lp.price < ?2 " +
+            " AND lp.is_valid = 1", nativeQuery = true)
+    public List<LaptopEntity> findAnyLaptopsInPriceRange(BigDecimal min, BigDecimal max);
 }

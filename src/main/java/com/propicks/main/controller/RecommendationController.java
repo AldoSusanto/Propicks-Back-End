@@ -42,7 +42,7 @@ public class RecommendationController {
 
     @GetMapping("/")
     public String healthCheck(){
-        return "Hello World ! V1.2.7";
+        return "Hello World ! V1.2.8";
     }
 
     @CrossOrigin
@@ -68,7 +68,9 @@ public class RecommendationController {
         List<LaptopEntity> laptopEntityList = laptopRepository.findSuitableLaptops(userBudget.getMinBudget(), userBudget.getMaxBudget(), processorNamesList, recommendedSpecs.getMinRam(), graphicCardsNamesList);
 
         // 3.2)
-        // todo
+        if (laptopEntityList.isEmpty()) {
+            laptopEntityList = laptopRepository.findAnyLaptopsInPriceRange(userBudget.getMinBudget(), userBudget.getMaxBudget());
+        }
 
         // 4
         List<LaptopResponse> rawTopTen = new ArrayList<>();
@@ -76,7 +78,7 @@ public class RecommendationController {
             rawTopTen = rankingService.generateTopTen(laptopEntityList, userBudget, recommendedSpecs, request);
         }
 
-        List<LaptopResponse> topTen = insightsService.generateInsights(rawTopTen, request);
+        List<LaptopResponse> topTen = insightsService.generateInsights(rawTopTen, request, userBudget);
 
         log.info("Returning {} Response: {}", topTen.size(), topTen.toString());
         return topTen;
@@ -91,7 +93,6 @@ public class RecommendationController {
     - For cases like these, then we shouldn't go with spec first approach, we should go with budget first approach
     - Just pick the laptops that meet his budget (max 30)
     - Then we need to rank them to top 10, I think we can just rank based on specs and secondary factors
-    - //todo: design the ranking system for this
-   - Then at the end, we go through each laptop and check which softwares will not work on this laptop, and then put this as remarks
-   - Make sure we mark this recommendation to be veryLowBudget, so FE can maybe handle a UI like this
+    - Then at the end, we go through each laptop and check which softwares will not work on this laptop, and then put this as remarks
+    - Make sure we mark this recommendation to be veryLowBudget, so FE can maybe handle a UI like this
 */

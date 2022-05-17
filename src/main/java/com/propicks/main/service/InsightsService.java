@@ -7,6 +7,7 @@ import com.propicks.main.entity.InsightsEntity;
 import com.propicks.main.entity.ProcessorEntity;
 import com.propicks.main.entity.SoftwareEntity;
 import com.propicks.main.model.Insights;
+import com.propicks.main.model.UserBudget;
 import com.propicks.main.repository.GraphicCardsRepository;
 import com.propicks.main.repository.InsightsRepository;
 import com.propicks.main.repository.ProcessorRepository;
@@ -14,6 +15,7 @@ import com.propicks.main.repository.SoftwareRepository;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -29,7 +31,8 @@ public class InsightsService {
     private SoftwareRepository softwareRepository;
     private ProcessorRepository processorRepository;
     private GraphicCardsRepository graphicCardsRepository;
-    public static final int INSIGHTS_LIMIT = 6;
+    public static final int INSIGHTS_LIMIT = 5;
+    public static final int USER_CONSIDERED_LOW_BUDGET = 8000000;
 
     public InsightsService(InsightsRepository insightsRepository, SoftwareRepository softwareRepository, ProcessorRepository processorRepository, GraphicCardsRepository graphicCardsRepository) {
         this.insightsRepository = insightsRepository;
@@ -38,7 +41,7 @@ public class InsightsService {
         this.graphicCardsRepository = graphicCardsRepository;
     }
 
-    public List<LaptopResponse> generateInsights(List<LaptopResponse> rawTopTen, UserPicks request) {
+    public List<LaptopResponse> generateInsights(List<LaptopResponse> rawTopTen, UserPicks request, UserBudget userBudget) {
         List<GraphicCardsEntity> sortedGraphicCardList = graphicCardsRepository.findAllByOrderByGraphicCardRankAsc();
         List<ProcessorEntity> sortedProcessorList = processorRepository.findAllByOrderByProcessorRankAsc();
         List<InsightsEntity> dbInsightsList = insightsRepository.findAll();
@@ -63,7 +66,7 @@ public class InsightsService {
             insights.addAll(checkLaptopWeight(laptop, dbInsightsList));
 
             // CPU & HDD & RAM
-            insights.addAll(checkMainSpecs(request, laptop, dbInsightsList, sortedProcessorList));
+            insights.addAll(checkMainSpecs(request, laptop, dbInsightsList, sortedProcessorList, userBudget));
 
             // Gaming & GCards
             if (request.getGaming() != null && !request.getGaming().getSoftware().isEmpty()){
@@ -154,7 +157,7 @@ public class InsightsService {
         return insightsList;
     }
 
-    private List<Insights> checkMainSpecs(UserPicks request, LaptopResponse laptop, List<InsightsEntity> DBList, List<ProcessorEntity> sortedProcessorList) {
+    private List<Insights> checkMainSpecs(UserPicks request, LaptopResponse laptop, List<InsightsEntity> DBList, List<ProcessorEntity> sortedProcessorList, UserBudget userBudget) {
         List<Insights> insightsList = new ArrayList<>();
 
         // CPU
@@ -166,14 +169,14 @@ public class InsightsService {
             insightsList.add(obtainInsightFromId("3", DBList));
         }
 
-        if(laptopProcessor.getProcessorRank() > intel3.getProcessorRank()){
+        if(laptopProcessor.getProcessorRank() > intel3.getProcessorRank() && userHasLowBudget(userBudget)){
             insightsList.add(obtainInsightFromId("26", DBList));
         }
 
         // RAM
         if(laptop.getRam() >= 16) insightsList.add(obtainInsightFromId("4", DBList));
 
-        if(laptop.getRam() <= 4) insightsList.add(obtainInsightFromId("25", DBList));
+        if(laptop.getRam() <= 4 && userHasLowBudget(userBudget)) insightsList.add(obtainInsightFromId("25", DBList));
 
         // Storage
         boolean hugeSize = (laptop.getStorageOne() + laptop.getStorageTwo()) >= 512;
@@ -242,5 +245,11 @@ public class InsightsService {
         }
 
         return insightsList;
+    }
+
+    // Deprecated: We thought it might be a good idea to exclude "Weak RAM" and "Weak processor" if the user has low budget
+    // However, I think this might not come out as good since we shouldnt hide those information to users
+    private boolean userHasLowBudget(UserBudget userBudget){
+        return userBudget.getMaxBudget().compareTo(BigDecimal.valueOf(USER_CONSIDERED_LOW_BUDGET)) > 0;
     }
 }
