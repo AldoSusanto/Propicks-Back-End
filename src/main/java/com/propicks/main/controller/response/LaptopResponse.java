@@ -18,6 +18,8 @@ public class LaptopResponse {
     private String title;
     private String name;
     private BigDecimal price;
+    private Boolean isSponsored;
+    private String sponsorId;
     private String brand;
     private String laptopType;
     private String processor;
@@ -31,6 +33,7 @@ public class LaptopResponse {
     private Double weightGrams;
     private Double size;
     private String description;
+    private String sponsorName;
     private List<String> imageLink;
     private List<LaptopLinks> link;
     private List<Insights> insights;

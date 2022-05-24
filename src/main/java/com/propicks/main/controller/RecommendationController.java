@@ -3,14 +3,18 @@ package com.propicks.main.controller;
 import com.propicks.main.controller.request.userpicks.UserPicks;
 import com.propicks.main.controller.response.LaptopResponse;
 import com.propicks.main.entity.LaptopEntity;
+import com.propicks.main.entity.SponsorLaptopEntity;
+import com.propicks.main.model.LaptopLinks;
 import com.propicks.main.model.RecommendedSpecs;
 import com.propicks.main.model.UserBudget;
 import com.propicks.main.repository.LaptopRepository;
+import com.propicks.main.repository.SponsorLaptopRepository;
 import com.propicks.main.service.InsightsService;
 import com.propicks.main.service.PriceRankService;
 import com.propicks.main.service.RankingService;
 import com.propicks.main.service.SpecificationService;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.boot.actuate.endpoint.web.Link;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -27,22 +31,25 @@ public class RecommendationController {
     private LaptopRepository laptopRepository;
     private PriceRankService priceRankService;
     private InsightsService insightsService;
+    private SponsorLaptopRepository sponsorLaptopRepository;
 
     public RecommendationController(SpecificationService specificationService,
                                     RankingService rankingService,
                                     LaptopRepository laptopRepository,
                                     PriceRankService priceRankService,
-                                    InsightsService insightsService){
+                                    InsightsService insightsService,
+                                    SponsorLaptopRepository sponsorLaptopRepository) {
         this.specificationService = specificationService;
         this.rankingService = rankingService;
         this.laptopRepository = laptopRepository;
         this.priceRankService = priceRankService;
         this.insightsService = insightsService;
+        this.sponsorLaptopRepository = sponsorLaptopRepository;
     }
 
     @GetMapping("/")
     public String healthCheck(){
-        return "Hello World ! V1.2.8";
+        return "Hello World ! V1.2.9";
     }
 
     @CrossOrigin
@@ -78,11 +85,73 @@ public class RecommendationController {
             rawTopTen = rankingService.generateTopTen(laptopEntityList, userBudget, recommendedSpecs, request);
         }
 
-        List<LaptopResponse> topTen = insightsService.generateInsights(rawTopTen, request, userBudget);
+        // 5 Add Sponsored Laptops
+        List<LaptopEntity> sponsoredLaptopList = laptopRepository.findSuitableSponsorLaptops(userBudget.getMinBudget(), userBudget.getMaxBudget(), processorNamesList, recommendedSpecs.getMinRam(), graphicCardsNamesList);
+        List<SponsorLaptopEntity> sponsoredLaptopData = sponsorLaptopRepository.findSuitableSponsorLaptops(userBudget.getMinBudget(), userBudget.getMaxBudget(), processorNamesList, recommendedSpecs.getMinRam(), graphicCardsNamesList);
+        List<LaptopResponse> sponsoredLaptops = rankingService.generateTopTen(sponsoredLaptopList, userBudget, recommendedSpecs, request);
+        sponsoredLaptops = populateFieldsForSponsor(sponsoredLaptops, sponsoredLaptopData);
+
+        List<LaptopResponse> finalLaptopList = combineLaptopLists(rawTopTen, sponsoredLaptops);
+
+
+        List<LaptopResponse> topTen = insightsService.generateInsights(finalLaptopList, request, userBudget);
 
         log.info("Returning {} Response: {}", topTen.size(), topTen.toString());
         return topTen;
 
+    }
+
+    private List<LaptopResponse> populateFieldsForSponsor(List<LaptopResponse> sponsoredLaptops, List<SponsorLaptopEntity> sponsoredLaptopData) {
+        for (LaptopResponse laptop : sponsoredLaptops) {
+            SponsorLaptopEntity sponsorData = findCorrespondingSponsorLaptop(laptop.getSponsorId(), sponsoredLaptopData);
+            laptop.setIsSponsored(true);
+            laptop.setSponsorName(sponsorData.getSponsorName());
+
+            // Link
+            LaptopLinks laptopLink = new LaptopLinks();
+            laptopLink.setLinkFrom(sponsorData.getButtonMessage());
+            laptopLink.setLink(sponsorData.getLinkTo());
+            laptop.setLink(List.of(laptopLink));
+        }
+        return sponsoredLaptops;
+    }
+
+    private SponsorLaptopEntity findCorrespondingSponsorLaptop(String sponsorId, List<SponsorLaptopEntity> sponsoredLaptopData) {
+        for (SponsorLaptopEntity eachLaptop: sponsoredLaptopData) {
+            if (eachLaptop.getSponsorId().equalsIgnoreCase(sponsorId)) {
+                return eachLaptop;
+            }
+        }
+        log.error("Unable to find Sponsor Laptop Entity with sponsorId: + " + sponsorId);
+        return null;
+
+    }
+
+    private List<LaptopResponse> combineLaptopLists(List<LaptopResponse> rawTopTen, List<LaptopResponse> sponsoredLaptops) {
+        List<LaptopResponse> finalList = rawTopTen;
+        List<Integer> sponsorPatterns = new ArrayList<>(List.of(2,3,11)); // In what ranks do u want the sponsor laptops to be placed
+        Integer sponsorLaptopIndex = 0;
+
+        for (Integer index : sponsorPatterns) {
+            if (sponsorLaptopIndex < sponsoredLaptops.size()) {
+                try {
+                    // If index doesn't exist, we simply add the sponsored laptops to the end of the list
+                    if (index >= finalList.size()) {
+                        finalList.add(sponsoredLaptops.get(sponsorLaptopIndex));
+                    } else { // But if index exists, then we add the sponsored laptops at the specific index
+                        finalList.add(index-1, sponsoredLaptops.get(sponsorLaptopIndex));
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to combine sponsored laptops to original laptops " + e);
+                    log.error("Laptop Results: " + rawTopTen.toString());
+                    log.error("Sponsored Laptops: " + sponsoredLaptops.toString());
+                } finally {
+                    sponsorLaptopIndex = sponsorLaptopIndex + 1;
+                }
+            }
+        }
+
+        return finalList;
     }
 }
 

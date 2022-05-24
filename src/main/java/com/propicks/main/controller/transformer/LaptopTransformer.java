@@ -52,19 +52,22 @@ public class LaptopTransformer {
 
         LaptopLinks link1 = new LaptopLinks();
         link1.setLink(linksEntity.getLinkOne());
-        link1.setLinkFrom(linksEntity.getLinkOriginOne());
+        link1.setLinkFrom(linksEntity.getLinkOriginOne() != null ? "Cek " + linksEntity.getLinkOriginOne() : linksEntity.getLinkOriginOne());
         LaptopLinks link2 = new LaptopLinks();
         link2.setLink(linksEntity.getLinkTwo());
-        link2.setLinkFrom(linksEntity.getLinkOriginTwo());
+        link2.setLinkFrom(linksEntity.getLinkOriginTwo() != null ? "Cek " + linksEntity.getLinkOriginTwo() : linksEntity.getLinkOriginTwo());
         LaptopLinks link3 = new LaptopLinks();
         link3.setLink(linksEntity.getLinkThree());
-        link3.setLinkFrom(linksEntity.getLinkOriginThree());
+        link3.setLinkFrom(linksEntity.getLinkOriginThree() != null ? "Cek " + linksEntity.getLinkOriginThree() : linksEntity.getLinkOriginThree());
 
         List<LaptopLinks> links = new ArrayList<>();
         links.add(link1);
         links.add(link2);
         links.add(link3);
         response.setLink(links);
+
+        response.setIsSponsored(false); // Set default to false
+        response.setSponsorId(entity.getSponsorId());
 
         return response;
     }

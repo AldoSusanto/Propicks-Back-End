@@ -42,4 +42,6 @@ public class LaptopEntity {
     private String imageLink;
     private String link;
 
+    private String sponsorId;
+
 }
