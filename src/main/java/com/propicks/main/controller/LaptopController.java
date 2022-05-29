@@ -58,6 +58,7 @@ public class LaptopController {
         LaptopLinksEntity linksEntity = laptopLinksRepository.findById(laptopEntity.getId()).get();
 
         LaptopResponse laptopResponse = laptopTransformer.generateLaptopResponse(laptopEntity, imagesEntity, linksEntity);
+        laptopResponse.setButtonMessage(null); // We use custom button Message for this
 
         if (request != null) {
             UserBudget userBudget = specificationService.determineUserBudget(request);
@@ -69,7 +70,7 @@ public class LaptopController {
         sponsorResponse.setSponsorId(id);
         sponsorResponse.setLaptop(laptopResponse);
         sponsorResponse.setSponsorName(entity.getSponsorName());
-        sponsorResponse.setButtonMessage("Cek " + entity.getSponsorName());
+        sponsorResponse.setButtonMessage(entity.getButtonMessage());
         sponsorResponse.setLinkTo(laptopResponse.getLink().get(0).getLink());
         sponsorResponse.setIsValid(entity.getIsValid());
 

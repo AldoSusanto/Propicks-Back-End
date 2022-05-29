@@ -50,15 +50,16 @@ public class LaptopTransformer {
         imagelinks.add(imagesEntity.getImageLinkFive());
         response.setImageLink(imagelinks);
 
+        //todo: Since we already have buttonMessage field, we might not need this anymore
         LaptopLinks link1 = new LaptopLinks();
         link1.setLink(linksEntity.getLinkOne());
-        link1.setLinkFrom(linksEntity.getLinkOriginOne() != null ? "Cek " + linksEntity.getLinkOriginOne() : linksEntity.getLinkOriginOne());
+        link1.setLinkFrom(linksEntity.getLinkOriginOne() != null &&  linksEntity.getLinkOriginOne().length() > 0 ? "Cek " + linksEntity.getLinkOriginOne() : linksEntity.getLinkOriginOne());
         LaptopLinks link2 = new LaptopLinks();
         link2.setLink(linksEntity.getLinkTwo());
-        link2.setLinkFrom(linksEntity.getLinkOriginTwo() != null ? "Cek " + linksEntity.getLinkOriginTwo() : linksEntity.getLinkOriginTwo());
+        link2.setLinkFrom(linksEntity.getLinkOriginTwo() != null &&  linksEntity.getLinkOriginTwo().length() > 0 ? "Cek " + linksEntity.getLinkOriginTwo() : linksEntity.getLinkOriginTwo());
         LaptopLinks link3 = new LaptopLinks();
         link3.setLink(linksEntity.getLinkThree());
-        link3.setLinkFrom(linksEntity.getLinkOriginThree() != null ? "Cek " + linksEntity.getLinkOriginThree() : linksEntity.getLinkOriginThree());
+        link3.setLinkFrom(linksEntity.getLinkOriginThree() != null &&  linksEntity.getLinkOriginThree().length() > 0 ? "Cek " + linksEntity.getLinkOriginThree() : linksEntity.getLinkOriginThree());
 
         List<LaptopLinks> links = new ArrayList<>();
         links.add(link1);
@@ -68,6 +69,10 @@ public class LaptopTransformer {
 
         response.setIsSponsored(false); // Set default to false
         response.setSponsorId(entity.getSponsorId());
+        response.setButtonMessage(linksEntity.getLinkOriginOne() != null &&  linksEntity.getLinkOriginOne().length() > 0 ? "Cek " + linksEntity.getLinkOriginOne() : linksEntity.getLinkOriginOne());
+
+        response.setReason("Laptop ini bisa menjalankan semua software/game yang anda pilih");
+        response.setReview("-");
 
         return response;
     }

@@ -106,6 +106,7 @@ public class RecommendationController {
             SponsorLaptopEntity sponsorData = findCorrespondingSponsorLaptop(laptop.getSponsorId(), sponsoredLaptopData);
             laptop.setIsSponsored(true);
             laptop.setSponsorName(sponsorData.getSponsorName());
+            laptop.setButtonMessage(sponsorData.getButtonMessage());
 
             // Link
             LaptopLinks laptopLink = new LaptopLinks();

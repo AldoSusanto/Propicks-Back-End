@@ -34,6 +34,9 @@ public class LaptopResponse {
     private Double size;
     private String description;
     private String sponsorName;
+    private String buttonMessage;
+    private String reason;
+    private String review;
     private List<String> imageLink;
     private List<LaptopLinks> link;
     private List<Insights> insights;
