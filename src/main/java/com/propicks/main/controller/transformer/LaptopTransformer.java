@@ -71,7 +71,7 @@ public class LaptopTransformer {
         response.setSponsorId(entity.getSponsorId());
         response.setButtonMessage(linksEntity.getLinkOriginOne() != null &&  linksEntity.getLinkOriginOne().length() > 0 ? "Cek " + linksEntity.getLinkOriginOne() : linksEntity.getLinkOriginOne());
 
-        response.setReason("Laptop ini bisa menjalankan semua software/game yang anda pilih");
+        response.setReason("Laptop ini bisa menjalankan semua software/game yang kamu pilih");
         response.setReview("-");
 
         return response;
