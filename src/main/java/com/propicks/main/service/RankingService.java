@@ -319,7 +319,7 @@ public class RankingService {
         int ratioSum = ratio.stream().mapToInt(value -> value).sum();
         for(int i = 0 ; i < ratio.size() ; i++){
             float division = (float) ratio.get(i) / ratioSum;
-            ratio.set(i, Math.round(division * 10));
+            ratio.set(i, Math.round(division * 5));
         }
 //        Temp delete: if no issues until 6/17/2022, we can delete them
 //        if(ratioSum < 10){ }

@@ -49,7 +49,7 @@ public class RecommendationController {
 
     @GetMapping("/")
     public String healthCheck(){
-        return "Hello World ! V1.2.9";
+        return "Hello World ! V1.2.10";
     }
 
     @CrossOrigin
@@ -130,7 +130,7 @@ public class RecommendationController {
 
     private List<LaptopResponse> combineLaptopLists(List<LaptopResponse> rawTopTen, List<LaptopResponse> sponsoredLaptops) {
         List<LaptopResponse> finalList = rawTopTen;
-        List<Integer> sponsorPatterns = new ArrayList<>(List.of(2,3,11)); // In what ranks do u want the sponsor laptops to be placed
+        List<Integer> sponsorPatterns = new ArrayList<>(List.of(1,2,3,4,5)); // In what ranks do u want the sponsor laptops to be placed
         Integer sponsorLaptopIndex = 0;
 
         for (Integer index : sponsorPatterns) {

@@ -28,6 +28,7 @@ public class LaptopResponse {
     private String storageType;
     private Integer storageOne;
     private Integer storageTwo;
+    private Integer totalStorage;
     private String display;
     private Boolean isTouchscreen;
     private Double weightGrams;

@@ -36,6 +36,7 @@ public class LaptopTransformer {
         response.setStorageType(entity.getStorageType());
         response.setStorageOne(entity.getStorageOne());
         response.setStorageTwo(entity.getStorageTwo());
+        response.setTotalStorage(entity.getStorageOne() + entity.getStorageTwo());
         response.setDisplay(entity.getDisplay());
         response.setIsTouchscreen(entity.getIsTouchscreen());
         response.setWeightGrams(entity.getWeightGrams());
