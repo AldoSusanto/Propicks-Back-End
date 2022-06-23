@@ -11,7 +11,6 @@ import com.propicks.main.repository.*;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -146,7 +145,7 @@ public class RankingService {
             // Secondary Factors Scores
             scoreSheet.setWeightScore(generateWeightScore(entity, scoreSheet.getWeightMaxScore()));
             scoreSheet.setSizeScore(generateSizeScore(entity.getSize(), Double.valueOf(result.getSize())));
-            scoreSheet.setTouchscreenScore(entity.getIsTouchscreen().equals(result.getTouchScreen().equals("YES")) ? 50.0 : 0.00);
+            scoreSheet.setTouchscreenScore(generateTouchscreenScore(entity.getIsTouchscreen(), result.getTouchScreen()));
             scoreSheet.setBrandScore(result.getBrand().stream().anyMatch(entity.getBrand()::equalsIgnoreCase) ? 50.0 : 0.00);
             scoreSheet.setSecondaryTotalScore((scoreSheet.getWeightScore() + scoreSheet.getSizeScore() + scoreSheet.getTouchscreenScore() + scoreSheet.getBrandScore()) /
                     (scoreSheet.getWeightMaxScore() + scoreSheet.getSizeMaxScore() + scoreSheet.getTouchscreenMaxScore() + scoreSheet.getBrandMaxScore()) * SECONDARY_FACTOR_POWER);
@@ -192,6 +191,26 @@ public class RankingService {
 
 
         return topNresults;
+    }
+
+    private Double generateTouchscreenScore(Boolean isLaptopTouchscreen, String userChoice) {
+        // if yestouch
+            // if laptopIsTouchscreen, we give 50/50 points
+            // if !laptopisTouchscreen, we give 0/50 points
+        // if noTouch
+            // if laptopisTouchscreen, we give 0/50 points
+            // if !laptopisTouchscreen, we give 50/50 points
+        // if cantouch
+            // if laptopIsTouchscreen, we give 25/50 points (We still give 25 pts because assuming the person is neutral, a touchscreen laptop is still better than non-touchscreen laptop)
+            // if !laptopIsTouchscreen, we give 0/50 points
+
+        if (userChoice.equalsIgnoreCase("YesTouch")) {
+            return isLaptopTouchscreen ? 50.0 : 0.0;
+        } else if (userChoice.equalsIgnoreCase("NoTouch")) {
+            return isLaptopTouchscreen ? 0.0 : 50.0;
+        } else {
+            return isLaptopTouchscreen ? 25.0 : 0.0;
+        }
     }
 
     private Double generateSizeScore(Double laptopSize, Double userSize) {
@@ -319,7 +338,7 @@ public class RankingService {
         int ratioSum = ratio.stream().mapToInt(value -> value).sum();
         for(int i = 0 ; i < ratio.size() ; i++){
             float division = (float) ratio.get(i) / ratioSum;
-            ratio.set(i, Math.round(division * 5));
+            ratio.set(i, Math.round(division * 7));
         }
 //        Temp delete: if no issues until 6/17/2022, we can delete them
 //        if(ratioSum < 10){ }

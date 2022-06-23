@@ -228,7 +228,7 @@ public class InsightsService {
 
         // Not touchscreen
         // Only show if user requests touchscreen
-        if(!request.getTouchScreen().isEmpty() && !laptop.getIsTouchscreen()){
+        if(request.getTouchScreen().equalsIgnoreCase("YesTouch") && !laptop.getIsTouchscreen()){
             insightsList.add(obtainInsightFromId("8", DBList));
         }
 
